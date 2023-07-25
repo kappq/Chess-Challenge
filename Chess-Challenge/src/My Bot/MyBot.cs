@@ -7,16 +7,16 @@ public class MyBot : IChessBot
         Move[] legalMoves = board.GetLegalMoves();
         Move bestMove = legalMoves[0];
 
-        int maxEval = int.MinValue;
+        int maxScore = int.MinValue;
 
         foreach (Move move in legalMoves)
         {
             board.MakeMove(move);
 
-            int eval = -Search(board, 3);
-            if (eval > maxEval)
+            int score = -Search(board, 5, int.MinValue, int.MaxValue);
+            if (score > maxScore)
             {
-                maxEval = eval;
+                maxScore = score;
                 bestMove = move;
             }
 
@@ -26,26 +26,31 @@ public class MyBot : IChessBot
         return bestMove;
     }
 
-    int Search(Board board, int depth)
+    int Search(Board board, int depth, int alpha, int beta)
     {
         if (depth == 0 || board.IsInCheckmate() || board.IsDraw())
             // Return score relative to side to move
             return (board.IsWhiteToMove ? 1 : -1) * Evaluate(board);
 
-        int maxEval = int.MinValue;
+        int maxScore = int.MinValue;
 
         foreach (Move move in board.GetLegalMoves())
         {
             board.MakeMove(move);
 
-            int eval = -Search(board, depth - 1);
-            if (eval > maxEval)
-                maxEval = eval;
+            int score = -Search(board, depth - 1, -beta, -alpha);
+            if (score > maxScore)
+                maxScore = score;
+            if (maxScore > alpha)
+                alpha = maxScore;
 
             board.UndoMove(move);
+
+            if (alpha >= beta)
+                break;
         }
 
-        return maxEval;
+        return maxScore;
     }
 
     int Evaluate(Board board)
