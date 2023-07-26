@@ -2,27 +2,26 @@
 
 public class MyBot : IChessBot
 {
+    const int Infinity = int.MaxValue;
+
     public Move Think(Board board, Timer timer)
     {
         Move[] legalMoves = board.GetLegalMoves();
         Move bestMove = legalMoves[0];
 
-        int maxScore = int.MinValue;
-
+        int maxScore = -Infinity;
         foreach (Move move in legalMoves)
         {
             board.MakeMove(move);
+            int score = -Search(board, 5, -Infinity, Infinity);
+            board.UndoMove(move);
 
-            int score = -Search(board, 5, int.MinValue, int.MaxValue);
             if (score > maxScore)
             {
                 maxScore = score;
                 bestMove = move;
             }
-
-            board.UndoMove(move);
         }
-
         return bestMove;
     }
 
@@ -32,25 +31,18 @@ public class MyBot : IChessBot
             // Return score relative to side to move
             return (board.IsWhiteToMove ? 1 : -1) * Evaluate(board);
 
-        int maxScore = int.MinValue;
-
         foreach (Move move in board.GetLegalMoves())
         {
             board.MakeMove(move);
-
             int score = -Search(board, depth - 1, -beta, -alpha);
-            if (score > maxScore)
-                maxScore = score;
-            if (maxScore > alpha)
-                alpha = maxScore;
-
             board.UndoMove(move);
 
-            if (alpha >= beta)
-                break;
+            if (score >= beta)
+                return beta;
+            if (score > alpha)
+                alpha = score;
         }
-
-        return maxScore;
+        return alpha;
     }
 
     int Evaluate(Board board)
