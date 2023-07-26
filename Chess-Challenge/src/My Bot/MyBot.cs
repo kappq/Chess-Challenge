@@ -4,9 +4,16 @@ public class MyBot : IChessBot
 {
     const int Infinity = int.MaxValue;
 
+    int? moveTime;
+    Timer? moveTimer;
+
     public Move Think(Board board, Timer timer)
     {
-        Move[] legalMoves = board.GetLegalMoves();
+        // Use 2.25% of the available time
+        moveTime = timer.MillisecondsRemaining / 40;
+        moveTimer = timer;
+
+        Move[] legalMoves = GetSortedMoves(board);
         Move bestMove = legalMoves[0];
 
         int maxScore = -Infinity;
@@ -14,7 +21,7 @@ public class MyBot : IChessBot
         foreach (Move move in legalMoves)
         {
             board.MakeMove(move);
-            int score = -Search(board, 3, -Infinity, Infinity);
+            int score = -Search(board, 10, -Infinity, Infinity);
             board.UndoMove(move);
 
             if (score > maxScore)
@@ -29,11 +36,10 @@ public class MyBot : IChessBot
 
     int Search(Board board, int depth, int alpha, int beta)
     {
-        if (depth == 0 || board.IsInCheckmate() || board.IsDraw())
-            // Return score relative to side to move
+        if (depth == 0 || board.IsInCheckmate() || board.IsDraw() || moveTimer?.MillisecondsElapsedThisTurn > moveTime)
             return Quiesce(board, alpha, beta);
 
-        foreach (Move move in board.GetLegalMoves())
+        foreach (Move move in GetSortedMoves(board))
         {
             board.MakeMove(move);
             int score = -Search(board, depth - 1, -beta, -alpha);
@@ -50,6 +56,7 @@ public class MyBot : IChessBot
 
     private int Quiesce(Board board, int alpha, int beta)
     {
+        // Return score relative to side to move
         int standPat = (board.IsWhiteToMove ? 1 : -1) * Evaluate(board);
 
         if (standPat >= beta)
@@ -73,6 +80,29 @@ public class MyBot : IChessBot
         }
 
         return alpha;
+    }
+
+    Move[] GetSortedMoves(Board board)
+    {
+        Move[] moves = board.GetLegalMoves();
+
+        for (int i = 1, j = 0; i < moves.Length; i++)
+        {
+            Move move = moves[i];
+
+            board.MakeMove(move);
+            bool moveIsCheck = board.IsInCheck();
+            board.UndoMove(move);
+
+            if (move.IsCapture || move.IsPromotion || moveIsCheck)
+            {
+                Move temp = moves[j];
+                moves[j++] = moves[i];
+                moves[i] = temp;
+            }
+        }
+
+        return moves;
     }
 
     int Evaluate(Board board)
