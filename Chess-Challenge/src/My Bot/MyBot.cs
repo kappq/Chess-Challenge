@@ -10,10 +10,11 @@ public class MyBot : IChessBot
         Move bestMove = legalMoves[0];
 
         int maxScore = -Infinity;
+
         foreach (Move move in legalMoves)
         {
             board.MakeMove(move);
-            int score = -Search(board, 5, -Infinity, Infinity);
+            int score = -Search(board, 3, -Infinity, Infinity);
             board.UndoMove(move);
 
             if (score > maxScore)
@@ -22,6 +23,7 @@ public class MyBot : IChessBot
                 bestMove = move;
             }
         }
+
         return bestMove;
     }
 
@@ -29,7 +31,7 @@ public class MyBot : IChessBot
     {
         if (depth == 0 || board.IsInCheckmate() || board.IsDraw())
             // Return score relative to side to move
-            return (board.IsWhiteToMove ? 1 : -1) * Evaluate(board);
+            return Quiesce(board, alpha, beta);
 
         foreach (Move move in board.GetLegalMoves())
         {
@@ -42,6 +44,34 @@ public class MyBot : IChessBot
             if (score > alpha)
                 alpha = score;
         }
+
+        return alpha;
+    }
+
+    private int Quiesce(Board board, int alpha, int beta)
+    {
+        int standPat = (board.IsWhiteToMove ? 1 : -1) * Evaluate(board);
+
+        if (standPat >= beta)
+            return beta;
+        if (alpha < standPat)
+            alpha = standPat;
+
+        foreach (Move move in board.GetLegalMoves())
+        {
+            if (!move.IsCapture)
+                continue;
+
+            board.MakeMove(move);
+            int score = -Quiesce(board, -beta, -alpha);
+            board.UndoMove(move);
+
+            if (score >= beta)
+                return beta;
+            if (score > alpha)
+                alpha = score;
+        }
+
         return alpha;
     }
 
