@@ -4,6 +4,9 @@ public class MyBot : IChessBot
 {
     const int Infinity = int.MaxValue;
 
+    // One value for each `PieceType` (Null, Pawn, Knight, Bishop, Queen, King)
+    int[] pieceValues = { 0, 100, 300, 300, 500, 900, 10000 };
+
     int? moveTime;
     Timer? moveTimer;
 
@@ -36,8 +39,13 @@ public class MyBot : IChessBot
 
     int Search(Board board, int depth, int alpha, int beta)
     {
-        if (depth == 0 || board.IsInCheckmate() || board.IsDraw() || moveTimer?.MillisecondsElapsedThisTurn > moveTime)
+        // if (depth == 0 || board.IsInCheckmate() || board.IsDraw() || moveTimer?.MillisecondsElapsedThisTurn > moveTime)
+        if (depth == 0 || moveTimer?.MillisecondsElapsedThisTurn > moveTime)
             return Quiesce(board, alpha, beta);
+        if (board.IsInCheckmate())
+            return -Infinity;
+        if (board.IsDraw())
+            return 0;
 
         foreach (Move move in GetSortedMoves(board))
         {
@@ -64,11 +72,8 @@ public class MyBot : IChessBot
         if (alpha < standPat)
             alpha = standPat;
 
-        foreach (Move move in board.GetLegalMoves())
+        foreach (Move move in board.GetLegalMoves(capturesOnly: true))
         {
-            if (!move.IsCapture)
-                continue;
-
             board.MakeMove(move);
             int score = -Quiesce(board, -beta, -alpha);
             board.UndoMove(move);
@@ -107,11 +112,15 @@ public class MyBot : IChessBot
 
     int Evaluate(Board board)
     {
-        return 200 * (board.GetPieceList(PieceType.King, true).Count - board.GetPieceList(PieceType.King, false).Count) +
-            9 * (board.GetPieceList(PieceType.Queen, true).Count - board.GetPieceList(PieceType.Queen, false).Count) +
-            5 * (board.GetPieceList(PieceType.Rook, true).Count - board.GetPieceList(PieceType.Rook, false).Count) +
-            3 * (board.GetPieceList(PieceType.Bishop, true).Count - board.GetPieceList(PieceType.Bishop, false).Count) +
-            3 * (board.GetPieceList(PieceType.Knight, true).Count - board.GetPieceList(PieceType.Knight, false).Count) +
-            board.GetPieceList(PieceType.Pawn, true).Count - board.GetPieceList(PieceType.Pawn, false).Count;
+        int score = 0;
+
+        // Iterate over piece types ignoring `PieceType.Null`
+        for (int pieceType = 1; pieceType <= 6; pieceType++)
+        {
+            int pieceCount = board.GetPieceList((PieceType)pieceType, true).Count - board.GetPieceList((PieceType)pieceType, false).Count;
+            score += pieceValues[pieceType] * pieceCount;
+        }
+
+        return score;
     }
 }
