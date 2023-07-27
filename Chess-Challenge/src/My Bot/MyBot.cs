@@ -20,21 +20,14 @@ public class MyBot : IChessBot
         Move[] legalMoves = board.GetLegalMoves();
         legalMoves = OrderMoves(legalMoves);
 
-        int maxScore = -Infinity;
-        Move bestMove = legalMoves[0];
-
-        foreach (Move move in legalMoves)
+        Move bestMove = legalMoves.MaxBy(move =>
         {
             board.MakeMove(move);
-            int score = -Search(board, 10, -Infinity, Infinity);
+            int score = -Search(board, 4, -Infinity, Infinity);
             board.UndoMove(move);
 
-            if (score > maxScore)
-            {
-                maxScore = score;
-                bestMove = move;
-            }
-        }
+            return score;
+        });
 
         return bestMove;
     }
@@ -93,7 +86,7 @@ public class MyBot : IChessBot
 
     Move[] OrderMoves(Move[] moves)
     {
-        return moves.OrderBy(move =>
+        return moves.OrderByDescending(move =>
         {
             int score = 0;
 
