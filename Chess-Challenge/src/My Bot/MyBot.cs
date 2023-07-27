@@ -1,4 +1,5 @@
 ﻿using ChessChallenge.API;
+using System.Linq;
 
 public class MyBot : IChessBot
 {
@@ -16,10 +17,11 @@ public class MyBot : IChessBot
         moveTime = timer.MillisecondsRemaining / 40;
         moveTimer = timer;
 
-        Move[] legalMoves = GetSortedMoves(board);
-        Move bestMove = legalMoves[0];
+        Move[] legalMoves = board.GetLegalMoves();
+        legalMoves = OrderMoves(legalMoves);
 
         int maxScore = -Infinity;
+        Move bestMove = legalMoves[0];
 
         foreach (Move move in legalMoves)
         {
@@ -39,7 +41,6 @@ public class MyBot : IChessBot
 
     int Search(Board board, int depth, int alpha, int beta)
     {
-        // if (depth == 0 || board.IsInCheckmate() || board.IsDraw() || moveTimer?.MillisecondsElapsedThisTurn > moveTime)
         if (depth == 0 || moveTimer?.MillisecondsElapsedThisTurn > moveTime)
             return Quiesce(board, alpha, beta);
         if (board.IsInCheckmate())
@@ -47,7 +48,10 @@ public class MyBot : IChessBot
         if (board.IsDraw())
             return 0;
 
-        foreach (Move move in GetSortedMoves(board))
+        Move[] legalMoves = board.GetLegalMoves();
+        legalMoves = OrderMoves(legalMoves);
+
+        foreach (Move move in legalMoves)
         {
             board.MakeMove(move);
             int score = -Search(board, depth - 1, -beta, -alpha);
@@ -87,27 +91,20 @@ public class MyBot : IChessBot
         return alpha;
     }
 
-    Move[] GetSortedMoves(Board board)
+    Move[] OrderMoves(Move[] moves)
     {
-        Move[] moves = board.GetLegalMoves();
-
-        for (int i = 1, j = 0; i < moves.Length; i++)
+        return moves.OrderBy(move =>
         {
-            Move move = moves[i];
+            int score = 0;
 
-            board.MakeMove(move);
-            bool moveIsCheck = board.IsInCheck();
-            board.UndoMove(move);
+            if (move.IsCapture)
+                score += 10 * (pieceValues[(int)move.CapturePieceType] - pieceValues[(int)move.MovePieceType]);
 
-            if (move.IsCapture || move.IsPromotion || moveIsCheck)
-            {
-                Move temp = moves[j];
-                moves[j++] = moves[i];
-                moves[i] = temp;
-            }
-        }
+            if (move.IsPromotion)
+                score += pieceValues[(int)move.PromotionPieceType];
 
-        return moves;
+            return score;
+        }).ToArray();
     }
 
     int Evaluate(Board board)
