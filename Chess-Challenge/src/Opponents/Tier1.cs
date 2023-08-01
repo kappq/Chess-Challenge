@@ -3,7 +3,7 @@ using System;
 
 namespace ChessChallenge.Example
 {
-    public class NegamaxBasic : IChessBot
+    public class Tier1 : IChessBot
     {
         //                     .  P    K    B    R    Q    K
         int[] kPieceValues = { 0, 100, 300, 310, 500, 900, 10000 };
